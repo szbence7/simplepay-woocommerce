@@ -16,20 +16,27 @@
 
 defined('ABSPATH') || exit;
 
-// Make sure WooCommerce is active
-if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-    return;
-}
-
 // Define plugin constants
 define('WC_SIMPLEPAY_VERSION', '1.0.0');
 define('WC_SIMPLEPAY_PATH', plugin_dir_path(__FILE__));
 
-// Include main gateway class
-require_once WC_SIMPLEPAY_PATH . 'includes/class-wc-simplepay-gateway.php';
+// Initialize the plugin
+add_action('plugins_loaded', 'wc_simplepay_init');
 
-// Add the gateway to WooCommerce
-add_filter('woocommerce_payment_gateways', 'add_simplepay_gateway');
+function wc_simplepay_init() {
+    // Make sure WooCommerce is active
+    if (!class_exists('WooCommerce')) {
+        add_action('admin_notices', 'wc_simplepay_missing_wc_notice');
+        return;
+    }
+
+    // Include main gateway class
+    require_once WC_SIMPLEPAY_PATH . 'includes/class-wc-simplepay-gateway.php';
+
+    // Add the gateway to WooCommerce
+    add_filter('woocommerce_payment_gateways', 'add_simplepay_gateway');
+}
+
 function add_simplepay_gateway($gateways) {
     $gateways[] = 'WC_SimplePay_Gateway';
     return $gateways;
@@ -49,4 +56,13 @@ function wc_simplepay_log($message, $level = 'info') {
         $context = array('source' => 'wc-simplepay');
         $logger->log($level, $message, $context);
     }
+}
+
+// Admin notice for missing WooCommerce
+function wc_simplepay_missing_wc_notice() {
+    ?>
+    <div class="error">
+        <p><?php _e('SimplePay Payment Gateway requires WooCommerce to be installed and active.', 'wc-simplepay'); ?></p>
+    </div>
+    <?php
 } 
